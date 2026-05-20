@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>내 주변 극장/영화관 검색 서비스</title>
+    <title>내 주변 극장/영화관 검색 서비스 🌸</title>
     <style>
         /* 기본 스타일 초기화 */
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -14,46 +14,47 @@
 
         /* 왼쪽 사이드바 */
         #sidebar {
-            width: 350px; height: 100%; background: #f8f9fa;
-            display: flex; flex-direction: column; border-right: 1px solid #ddd; z-index: 10;
+            width: 350px; height: 100%; background: #fff5f7;
+            display: flex; flex-direction: column; border-right: 1px solid #ffccd5; z-index: 10;
         }
 
-        /* 탭 메뉴 스타일 */
-        .tab-container { display: flex; background: #fff; border-bottom: 1px solid #eee; }
+        /* 🎀 탭 메뉴 스타일 (핑크 테마) */
+        .tab-container { display: flex; background: #fff; border-bottom: 1px solid #ffccd5; }
         .tab-btn {
-            flex: 1; padding: 15px; border: none; background: #f1f1f1;
+            flex: 1; padding: 15px; border: none; background: #ffe3e8; color: #a34857;
             font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.3s;
         }
-        .tab-btn.active { background: #fee500; color: #000; }
+        .tab-btn.active { background: #ff85a2; color: #fff; }
 
-        /* [추가] 검색창 스타일 */
-        .search-box { padding: 15px; background: #fff; border-bottom: 1px solid #eee; display: flex; gap: 6px; }
-        .search-box input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
-        .search-box button { width: 70px; background: #333; color: #fff; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
-        .search-box button:hover { background: #555; }
+        /* 🔍 검색창 스타일 (핑크 테마) */
+        .search-box { padding: 15px; background: #fff; border-bottom: 1px solid #ffccd5; display: flex; gap: 6px; }
+        .search-box input { flex: 1; padding: 10px; border: 1px solid #ffccd5; border-radius: 4px; font-size: 14px; }
+        .search-box input:focus { outline: 1px solid #ff85a2; }
+        .search-box button { width: 70px; background: #ff85a2; color: #fff; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        .search-box button:hover { background: #ff6384; }
 
         /* 리스트 스타일 */
         #resultList { flex: 1; overflow-y: auto; list-style: none; }
-        .item { padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; background: #fff; }
-        .item:hover { background: #f0f0f0; }
-        .item h5 { color: #333; margin-bottom: 5px; font-size: 15px; }
-        .item span { display: block; font-size: 13px; color: #666; margin-top: 2px; }
-        .item .tel { color: #008bcc; }
+        .item { padding: 15px; border-bottom: 1px solid #ffe3e8; cursor: pointer; background: #fff; transition: 0.2s; }
+        .item:hover { background: #fff0f3; }
+        .item h5 { color: #4a1525; margin-bottom: 5px; font-size: 15px; }
+        .item span { display: block; font-size: 13px; color: #7a5c65; margin-top: 2px; }
+        .item .tel { color: #ff477e; font-weight: bold; }
 
         /* 오른쪽 지도 영역 */
         #map { flex: 1; height: 100%; }
 
-        /* 정보창(팝업) 스타일 */
+        /* 📑 정보창(팝업) 스타일 (핑크 매칭) */
         .info-popup { padding: 10px; min-width: 220px; font-family: sans-serif; }
-        .info-popup h4 { font-size: 14px; margin-bottom: 6px; color: #333; }
+        .info-popup h4 { font-size: 14px; margin-bottom: 6px; color: #4a1525; font-weight: bold; }
         .info-popup p { font-size: 12px; color: #666; margin-bottom: 8px; line-height: 1.4; }
-        .info-popup .links { display: flex; gap: 8px; border-top: 1px solid #eee; padding-top: 6px; }
+        .info-popup .links { display: flex; gap: 8px; border-top: 1px solid #ffe3e8; padding-top: 6px; }
         .info-popup .links a {
-            font-size: 11px; color: #fff; background: #555; padding: 4px 8px;
-            text-decoration: none; border-radius: 3px; font-weight: bold;
+            font-size: 11px; color: #fff; background: #ff85a2; padding: 4px 8px;
+            text-decoration: none; border-radius: 3px; font-weight: bold; text-align: center; flex: 1;
         }
-        .info-popup .links a.roadview { background: #008bcc; }
-        .info-popup .links a.detail { background: #ea4335; }
+        .info-popup .links a.roadview { background: #ff6384; }
+        .info-popup .links a.detail { background: #c9184a; }
     </style>
 </head>
 <body>
@@ -126,14 +127,14 @@
         searchPlaces(); 
     }
 
-    // [수정] 주변 장소 검색 함수 (탭 카테고리 + 검색창 입력값 연동)
+    // 주변 장소 검색 함수
     function searchPlaces() {
         removeMarkers(); 
 
         const inputKeyword = document.getElementById('keyword').value.trim();
         
-        // 만약 검색창에 입력한 값이 있으면 입력값을 쓰고, 없으면 현재 선택된 탭 이름('극장' 또는 '영화관')을 기본 검색어로 사용합니다.
-        const finalKeyword = inputKeyword if inputKeyword else currentCategoryKeyword;
+        // [수정 완료] 자바스크립트 올바른 삼항 연산자 문법으로 수정하여 에러를 해결했습니다!
+        const finalKeyword = inputKeyword ? inputKeyword : currentCategoryKeyword;
 
         // 문화시설(CT1) 카테고리 제한을 걸어 엉뚱한 상호명이 나오지 않게 필터링
         ps.keywordSearch(finalKeyword, placesSearchCB, {
@@ -209,7 +210,7 @@
                 <p>${address}</p>
                 <div class="links">
                     <a href="${roadviewUrl}" target="_blank" class="roadview">🗺️ 로드뷰</a>
-                    <a href="${detailUrl}" target="_blank" class="detail">ℹ️ 영업시간/상세</a>
+                    <a href="${detailUrl}" target="_blank" class="detail">ℹ️ 상세정보</a>
                 </div>
             </div>
         `;
