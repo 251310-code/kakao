@@ -22,7 +22,7 @@
         .tab-container { display: flex; background: #fff; border-bottom: 1px solid #ffccd5; }
         .tab-btn {
             flex: 1; padding: 15px; border: none; background: #ffe3e8; color: #a34857;
-            font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.3s;
+            font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.3s; text-align: center;
         }
         .tab-btn.active { background: #ff85a2; color: #fff; }
 
@@ -34,23 +34,24 @@
         .search-box button:hover { background: #ff6384; }
 
         /* 리스트 스타일 */
-        #resultList { flex: 1; overflow-y: auto; list-style: none; }
+        #resultList { flex: 1; overflow-y: auto; list-style: none; background: #fff; }
         .item { padding: 15px; border-bottom: 1px solid #ffe3e8; cursor: pointer; background: #fff; transition: 0.2s; }
         .item:hover { background: #fff0f3; }
         .item h5 { color: #4a1525; margin-bottom: 5px; font-size: 15px; }
         .item span { display: block; font-size: 13px; color: #7a5c65; margin-top: 2px; }
-        .item .tel { color: #ff477e; font-weight: bold; }
+        .item .gray { color: #999; font-size: 11px; }
+        .item .tel { color: #ff477e; font-weight: bold; margin-top: 4px; font-size: 12px; }
 
         /* 오른쪽 지도 영역 */
         #map { flex: 1; height: 100%; }
 
-        /* 📑 정보창(팝업) 스타일 (핑크 매칭) */
+        /* 📑 정보창(팝업) 스타일 */
         .info-popup { padding: 10px; min-width: 220px; font-family: sans-serif; }
         .info-popup h4 { font-size: 14px; margin-bottom: 6px; color: #4a1525; font-weight: bold; }
         .info-popup p { font-size: 12px; color: #666; margin-bottom: 8px; line-height: 1.4; }
         .info-popup .links { display: flex; gap: 8px; border-top: 1px solid #ffe3e8; padding-top: 6px; }
         .info-popup .links a {
-            font-size: 11px; color: #fff; background: #ff85a2; padding: 4px 8px;
+            font-size: 11px; color: #fff; background: #ff85a2; padding: 5px 8px;
             text-decoration: none; border-radius: 3px; font-weight: bold; text-align: center; flex: 1;
         }
         .info-popup .links a.roadview { background: #ff6384; }
@@ -67,7 +68,7 @@
         </div>
         
         <div class="search-box">
-            <input type="text" id="keyword" placeholder="선택한 카테고리 내에서 검색" onkeypress="if(event.keyCode==13) searchPlaces()">
+            <input type="text" id="keyword" placeholder="이름으로 찾기 (예: 예술의전당, CGV)" onkeypress="if(event.keyCode==13) searchPlaces()">
             <button onclick="searchPlaces()">검색</button>
         </div>
 
@@ -101,6 +102,7 @@
         ps = new kakao.maps.services.Places(); 
         infowindow = new kakao.maps.InfoWindow({zIndex:1, removable: true});
 
+        // 사용자 현재 위치 잡기 및 첫 로드 시 자동 검색
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(function(position) {
                 const locPosition = new kakao.maps.LatLng(position.coords.latitude, position.coords.longitude);
@@ -122,21 +124,24 @@
 
         currentCategoryKeyword = keyword;
         
-        // 탭이 바뀔 때는 검색창을 비워주고 기본 카테고리 명으로 검색되게 합니다.
+        // 탭이 바뀔 때는 검색창을 비워주고 기본 카테고리 명으로 초기 검색되게 합니다.
         document.getElementById('keyword').value = '';
         searchPlaces(); 
     }
 
     // 주변 장소 검색 함수
     function searchPlaces() {
-        removeMarkers(); 
+        removeMarkers(); // 검색 전 기존 마커 지우기
 
         const inputKeyword = document.getElementById('keyword').value.trim();
         
-        // [수정 완료] 자바스크립트 올바른 삼항 연산자 문법으로 수정하여 에러를 해결했습니다!
-        const finalKeyword = inputKeyword ? inputKeyword : currentCategoryKeyword;
+        // 검색창 입력값이 있으면 입력값 적용, 없으면 선택된 탭 키워드 적용
+        let finalKeyword = currentCategoryKeyword;
+        if (inputKeyword.length > 0) {
+            finalKeyword = inputKeyword;
+        }
 
-        // 문화시설(CT1) 카테고리 제한을 걸어 엉뚱한 상호명이 나오지 않게 필터링
+        // 문화시설(CT1) 카테고리 제한을 걸어 극장/영화관만 안전하게 필터링
         ps.keywordSearch(finalKeyword, placesSearchCB, {
             location: map.getCenter(),
             radius: 5000,
@@ -145,94 +150,4 @@
     }
 
     function placesSearchCB(data, status) {
-        if (status === kakao.maps.services.Status.OK) {
-            displayPlaces(data); 
-        } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
-            document.getElementById('resultList').innerHTML = '<li style="padding:20px; text-align:center; color:#999;">검색 결과가 없습니다.</li>';
-        } else {
-            alert('검색 중 오류가 발생했습니다.');
-        }
-    }
-
-    function displayPlaces(places) {
-        const listEl = document.getElementById('resultList');
-        const bounds = new kakao.maps.LatLngBounds();
-        
-        listEl.innerHTML = ''; 
-
-        for (let i = 0; i < places.length; i++) {
-            const placePosition = new kakao.maps.LatLng(places[i].y, places[i].x);
-            const marker = addMarker(placePosition, places[i]);
-            const itemEl = getListItem(i, places[i]); 
-
-            bounds.extend(placePosition);
-
-            itemEl.onclick = function() {
-                displayInfowindow(marker, places[i]);
-                map.panTo(placePosition);
-            };
-
-            listEl.appendChild(itemEl);
-        }
-        
-        map.setBounds(bounds); 
-    }
-
-    function addMarker(position, place) {
-        const marker = new kakao.maps.Marker({
-            position: position,
-            map: map
-        });
-
-        kakao.maps.event.addListener(marker, 'click', function() {
-            displayInfowindow(marker, place);
-        });
-
-        markers.push(marker); 
-        return marker;
-    }
-
-    function removeMarkers() {
-        for (let i = 0; i < markers.length; i++) {
-            markers[i].setMap(null);
-        }
-        markers = [];
-    }
-
-    function displayInfowindow(marker, place) {
-        const address = place.road_address_name || place.address_name;
-        const detailUrl = `https://place.map.kakao.com/${place.id}`;
-        const roadviewUrl = `https://map.kakao.com/link/roadview/${place.y},${place.x}`;
-
-        const content = `
-            <div class="info-popup">
-                <h4>${place.place_name}</h4>
-                <p>${address}</p>
-                <div class="links">
-                    <a href="${roadviewUrl}" target="_blank" class="roadview">🗺️ 로드뷰</a>
-                    <a href="${detailUrl}" target="_blank" class="detail">ℹ️ 상세정보</a>
-                </div>
-            </div>
-        `;
-        
-        infowindow.setContent(content);
-        infowindow.open(map, marker);
-    }
-
-    function getListItem(index, place) {
-        const el = document.createElement('li');
-        const address = place.road_address_name || place.address_name;
-        
-        el.innerHTML = `
-            <div class="item">
-                <h5>${index + 1}. ${place.place_name}</h5>
-                <span>${address}</span>
-                ${place.phone ? `<span class="tel">${place.phone}</span>` : ''}
-            </div>
-        `;
-        return el;
-    }
-</script>
-
-</body>
-</html>
+        if (status ===
