@@ -39,7 +39,7 @@
         .item:hover { background: #fff0f3; }
         .item h5 { color: #4a1525; margin-bottom: 5px; font-size: 15px; }
         .item span { display: block; font-size: 13px; color: #7a5c65; margin-top: 2px; }
-        .item .gray { color: #999; font-size: 11px; }
+        .item class="gray" { color: #999; font-size: 11px; }
         .item .tel { color: #ff477e; font-weight: bold; margin-top: 4px; font-size: 12px; }
 
         /* 오른쪽 지도 영역 */
@@ -78,18 +78,20 @@
     <div id="map"></div>
 </div>
 
-<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=5c07c3fbfa3a5b6d10da29953b038d07&libraries=services"></script>
+<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=5c07c3fbfa3a5b6d10da29953b038d07&libraries=services&autoload=false"></script>
 
 <script>
     let map;
     let ps; 
     let infowindow; 
     let markers = []; 
-    let currentCategoryKeyword = '극장'; // 기본 선택 탭 키워드
+    let currentCategoryKeyword = '극장'; 
 
-    window.onload = function() {
+    // ⚠️ [해결 포인트 2] 카카오맵 공식 안심 로드 기법 사용
+    // 라이브러리가 완전히 준비된 후에만 initMap을 실행하므로 새로고침 오류가 완전 치료됩니다.
+    kakao.maps.load(function() {
         initMap();
-    };
+    });
 
     function initMap() {
         const container = document.getElementById('map');
@@ -124,24 +126,21 @@
 
         currentCategoryKeyword = keyword;
         
-        // 탭이 바뀔 때는 검색창을 비워주고 기본 카테고리 명으로 초기 검색되게 합니다.
         document.getElementById('keyword').value = '';
         searchPlaces(); 
     }
 
     // 주변 장소 검색 함수
     function searchPlaces() {
-        removeMarkers(); // 검색 전 기존 마커 지우기
+        removeMarkers(); 
 
         const inputKeyword = document.getElementById('keyword').value.trim();
         
-        // 검색창 입력값이 있으면 입력값 적용, 없으면 선택된 탭 키워드 적용
         let finalKeyword = currentCategoryKeyword;
         if (inputKeyword.length > 0) {
             finalKeyword = inputKeyword;
         }
 
-        // 문화시설(CT1) 카테고리 제한을 걸어 극장/영화관만 안전하게 필터링
         ps.keywordSearch(finalKeyword, placesSearchCB, {
             location: map.getCenter(),
             radius: 5000,
@@ -150,4 +149,21 @@
     }
 
     function placesSearchCB(data, status) {
-        if (status ===
+        if (status === kakao.maps.services.Status.OK) {
+            displayPlaces(data); 
+        } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
+            document.getElementById('resultList').innerHTML = '<li style="padding:20px; text-align:center; color:#999; background:#fff;">주변 검색 결과가 없습니다.</li>';
+        } else {
+            alert('검색 중 오류가 발생했습니다.');
+        }
+    }
+
+    function displayPlaces(places) {
+        const listEl = document.getElementById('resultList');
+        const bounds = new kakao.maps.LatLngBounds();
+        
+        listEl.innerHTML = ''; 
+
+        for (let i = 0; i < places.length; i++) {
+            const placePosition = new kakao.maps.LatLng(places[i].y, places[i].x);
+            const marker = addMarker
