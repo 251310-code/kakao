@@ -5,55 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>내 주변 극장/영화관 검색 서비스 🌸</title>
     <style>
-        /* 기본 스타일 초기화 */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body, html { width: 100%; height: 100%; font-family: 'Malgun Gothic', sans-serif; }
-
-        /* 화면 2분할 레이아웃 */
         .container { display: flex; width: 100%; height: 100vh; }
-
-        /* 왼쪽 사이드바 (핑크 테마) */
-        #sidebar {
-            width: 350px; height: 100%; background: #fff5f7;
-            display: flex; flex-direction: column; border-right: 1px solid #ffccd5; z-index: 10;
-        }
-
-        /* 🎀 탭 메뉴 스타일 (핑크 테마) */
+        #sidebar { width: 350px; height: 100%; background: #fff5f7; display: flex; flex-direction: column; border-right: 1px solid #ffccd5; z-index: 10; }
         .tab-container { display: flex; background: #fff; border-bottom: 1px solid #ffccd5; }
-        .tab-btn {
-            flex: 1; padding: 15px; border: none; background: #ffe3e8; color: #a34857;
-            font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.3s; text-align: center;
-        }
+        .tab-btn { flex: 1; padding: 15px; border: none; background: #ffe3e8; color: #a34857; font-size: 14px; font-weight: bold; cursor: pointer; text-align: center; }
         .tab-btn.active { background: #ff85a2; color: #fff; }
-
-        /* 🔍 검색창 스타일 (핑크 테마) */
         .search-box { padding: 15px; background: #fff; border-bottom: 1px solid #ffccd5; display: flex; gap: 6px; }
         .search-box input { flex: 1; padding: 10px; border: 1px solid #ffccd5; border-radius: 4px; font-size: 14px; }
         .search-box input:focus { outline: 1px solid #ff85a2; }
         .search-box button { width: 70px; background: #ff85a2; color: #fff; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
-        .search-box button:hover { background: #ff6384; }
-
-        /* 리스트 스타일 */
         #resultList { flex: 1; overflow-y: auto; list-style: none; background: #fff; }
-        .item { padding: 15px; border-bottom: 1px solid #ffe3e8; cursor: pointer; background: #fff; transition: 0.2s; }
+        .item { padding: 15px; border-bottom: 1px solid #ffe3e8; cursor: pointer; background: #fff; }
         .item:hover { background: #fff0f3; }
         .item h5 { color: #4a1525; margin-bottom: 5px; font-size: 15px; }
         .item span { display: block; font-size: 13px; color: #7a5c65; margin-top: 2px; }
         .item .gray { color: #999; font-size: 11px; display: inline; }
         .item .tel { color: #ff477e; font-weight: bold; margin-top: 4px; font-size: 12px; }
-
-        /* 오른쪽 지도 영역 */
         #map { flex: 1; height: 100%; }
-
-        /* 📑 정보창(팝업) 스타일 */
         .info-popup { padding: 10px; min-width: 220px; font-family: sans-serif; }
         .info-popup h4 { font-size: 14px; margin-bottom: 6px; color: #4a1525; font-weight: bold; }
         .info-popup p { font-size: 12px; color: #666; margin-bottom: 8px; line-height: 1.4; }
         .info-popup .links { display: flex; gap: 8px; border-top: 1px solid #ffe3e8; padding-top: 6px; }
-        .info-popup .links a {
-            font-size: 11px; color: #fff; background: #ff85a2; padding: 5px 8px;
-            text-decoration: none; border-radius: 3px; font-weight: bold; text-align: center; flex: 1;
-        }
+        .info-popup .links a { font-size: 11px; color: #fff; background: #ff85a2; padding: 5px 8px; text-decoration: none; border-radius: 3px; font-weight: bold; text-align: center; flex: 1; }
         .info-popup .links a.roadview { background: #ff6384; }
         .info-popup .links a.detail { background: #c9184a; }
     </style>
@@ -66,15 +41,12 @@
             <button class="tab-btn active" onclick="switchTab('극장', this)">극장/공연장</button>
             <button class="tab-btn" onclick="switchTab('영화관', this)">영화관</button>
         </div>
-        
         <div class="search-box">
-            <input type="text" id="keyword" placeholder="이름으로 찾기 (예: 예술의전당, CGV)" onkeypress="if(event.keyCode==13) searchPlaces()">
+            <input type="text" id="keyword" placeholder="이름으로 찾기 (예: 예술의전당)" onkeypress="if(event.keyCode==13) searchPlaces()">
             <button onclick="searchPlaces()">검색</button>
         </div>
-
         <ul id="resultList"></ul>
     </div>
-
     <div id="map"></div>
 </div>
 
@@ -87,7 +59,6 @@
     let markers = []; 
     let currentCategoryKeyword = '극장'; 
 
-    // 화면의 HTML 요소들이 전부 준비되면 카카오맵 라이브러리를 안전하게 수동 로드합니다.
     window.addEventListener('DOMContentLoaded', function() {
         kakao.maps.load(function() {
             initMap();
@@ -97,64 +68,49 @@
     function initMap() {
         const container = document.getElementById('map');
         const options = {
-            center: new kakao.maps.LatLng(37.566826, 126.9786567), // 기본 좌표 (서울시청)
+            center: new kakao.maps.LatLng(37.566826, 126.9786567), // 서울시청 기본
             level: 4
         };
 
         map = new kakao.maps.Map(container, options);
         ps = new kakao.maps.services.Places(); 
-        // removable: true 옵션으로 주위 빈 지도를 누르면 정보창이 깔끔하게 닫히도록 개선
         infowindow = new kakao.maps.InfoWindow({zIndex: 1, removable: true});
 
-        // ⚠️ [새로고침 무한 정지 현상 해결 로직]
-        // 위치를 확인하는 동안 지도가 멈추지 않게 타임아웃 예외 처리를 엄격하게 적용했습니다.
+        // 💡 핵심 해결책: 위치 권한을 물어보기 전에, 우선 기본 지도로 검색 결과를 띄워줍니다.
+        // 이렇게 하면 위치 팝업이 꼬이거나 응답이 없어도 화면이 절대로 안 멈춥니다!
+        searchPlaces();
+
+        // 그 다음 백그라운드에서 조용히 내 위치 조회를 시도합니다.
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 function(position) {
                     const locPosition = new kakao.maps.LatLng(position.coords.latitude, position.coords.longitude);
-                    map.setCenter(locPosition);
-                    searchPlaces(); // 현재 위치 이동 후 주변 극장 검색
+                    map.setCenter(locPosition); // 위치 찾기 성공하면 내 위치로 이동 후 재검색
+                    searchPlaces(); 
                 },
                 function(error) {
-                    // 위치 수집 권한이 없거나 차단된 환경에서도 지도가 죽지 않고 서울시청 기준으로 실행됩니다.
-                    console.log("위치 정보를 가져오지 못했습니다. 기본 위치로 검색합니다.");
-                    searchPlaces();
+                    console.log("위치 수집 대기 패스 -> 기본 지도 유지");
                 },
-                { 
-                    enableHighAccuracy: false,
-                    timeout: 3000, // 3초 이내에 내 위치 안 찾아지면 무한 대기 끊어버리고 바로 기본 지도 띄우기
-                    maximumAge: Infinity 
-                }
+                { timeout: 2000 } // 최대 2초만 기다리고 안 잡히면 바로 포기해서 블로킹 차단
             );
-        } else {
-            searchPlaces();
         }
     }
 
-    // 탭 전환 함수
     function switchTab(keyword, button) {
         const buttons = document.querySelectorAll('.tab-btn');
         buttons.forEach(btn => btn.classList.remove('active'));
         button.classList.add('active');
-
         currentCategoryKeyword = keyword;
-        
-        document.getElementById('keyword').value = ''; // 탭 이동 시 검색창 비워주기
+        document.getElementById('keyword').value = '';
         searchPlaces(); 
     }
 
-    // 주변 장소 검색 함수
     function searchPlaces() {
         removeMarkers(); 
-
         const inputKeyword = document.getElementById('keyword').value.trim();
-        
         let finalKeyword = currentCategoryKeyword;
-        if (inputKeyword.length > 0) {
-            finalKeyword = inputKeyword;
-        }
+        if (inputKeyword.length > 0) { finalKeyword = inputKeyword; }
 
-        // 문화시설(CT1) 카테고리 필터링을 걸어서 검색 바운더리 내만 서칭
         ps.keywordSearch(finalKeyword, placesSearchCB, {
             location: map.getCenter(),
             radius: 5000,
@@ -167,58 +123,56 @@
             displayPlaces(data); 
         } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
             document.getElementById('resultList').innerHTML = '<li style="padding:20px; text-align:center; color:#999; background:#fff;">주변 검색 결과가 없습니다.</li>';
-        } else {
-            alert('검색 중 오류가 발생했습니다.');
         }
     }
 
     function displayPlaces(places) {
         const listEl = document.getElementById('resultList');
         const bounds = new kakao.maps.LatLngBounds();
-        
         listEl.innerHTML = ''; 
 
         for (let i = 0; i < places.length; i++) {
             const placePosition = new kakao.maps.LatLng(places[i].y, places[i].x);
             const marker = addMarker(placePosition, places[i]);
             const itemEl = getListItem(i, places[i]); 
-
             bounds.extend(placePosition);
 
-            // 왼쪽 리스트 아이템 클릭 시
             itemEl.onclick = function() {
                 displayInfowindow(marker, places[i]);
                 map.panTo(placePosition);
             };
-
             listEl.appendChild(itemEl);
         }
-        
         map.setBounds(bounds); 
     }
 
     function addMarker(position, place) {
-        const marker = new kakao.maps.Marker({
-            position: position,
-            map: map
-        });
-
-        // 순정 마커 클릭 이벤트 연결하여 완벽한 터치 보장
-        kakao.maps.event.addListener(marker, 'click', function() {
-            displayInfowindow(marker, place);
-        });
-
+        const marker = new kakao.maps.Marker({ position: position, map: map });
+        kakao.maps.event.addListener(marker, 'click', function() { displayInfowindow(marker, place); });
         markers.push(marker); 
         return marker;
     }
 
     function removeMarkers() {
-        for (let i = 0; i < markers.length; i++) {
-            markers[i].setMap(null);
-        }
+        for (let i = 0; i < markers.length; i++) { markers[i].setMap(null); }
         markers = [];
     }
 
     function displayInfowindow(marker, place) {
         const address = place.road_address_name ? place.road_address_name : place.address_name;
-        const detailUrl =
+        const detailUrl = `https://place.map.kakao.com/${place.id}`;
+        const roadviewUrl = `https://map.kakao.com/link/roadview/${place.y},${place.x}`;
+        const content = `<div class="info-popup"><h4>${place.place_name}</h4><p>${address}</p><div class="links"><a href="${roadviewUrl}" target="_blank" class="roadview">🗺️ 로드뷰</a><a href="${detailUrl}" target="_blank" class="detail">ℹ️ 상세정보</a></div></div>`;
+        infowindow.setContent(content);
+        infowindow.open(map, marker);
+    }
+
+    function getListItem(index, place) {
+        const el = document.createElement('li');
+        let addressHtml = place.road_address_name ? `<span>${place.road_address_name}</span><span class="gray">(${place.address_name})</span>` : `<span>${place.address_name}</span>`;
+        el.innerHTML = `<div class="item"><h5>${index + 1}. ${place.place_name}</h5>${addressHtml}${place.phone ? `<div class="tel">${place.phone}</div>` : ''}</div>`;
+        return el;
+    }
+</script>
+</body>
+</html>
