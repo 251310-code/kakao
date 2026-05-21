@@ -12,7 +12,7 @@
         /* 화면 2분할 레이아웃 */
         .container { display: flex; width: 100%; height: 100vh; }
 
-        /* 왼쪽 사이드바 */
+        /* 왼쪽 사이드바 (핑크 테마) */
         #sidebar {
             width: 350px; height: 100%; background: #fff5f7;
             display: flex; flex-direction: column; border-right: 1px solid #ffccd5; z-index: 10;
@@ -87,7 +87,7 @@
     let markers = []; 
     let currentCategoryKeyword = '극장'; 
 
-    // 페이지가 완전히 준비되면 지도 안전 로드 프로세스 시작
+    // 화면의 HTML 요소들이 전부 준비되면 카카오맵 라이브러리를 안전하게 수동 로드합니다.
     window.addEventListener('DOMContentLoaded', function() {
         kakao.maps.load(function() {
             initMap();
@@ -103,22 +103,28 @@
 
         map = new kakao.maps.Map(container, options);
         ps = new kakao.maps.services.Places(); 
+        // removable: true 옵션으로 주위 빈 지도를 누르면 정보창이 깔끔하게 닫히도록 개선
         infowindow = new kakao.maps.InfoWindow({zIndex: 1, removable: true});
 
-        // ⚠️ [새로고침 먹통 현상 핵심 해결 코드]
-        // Geolocation의 딜레이가 지도 로드를 막지 못하도록 독립적인 타임아웃과 예외 처리를 추가했습니다.
+        // ⚠️ [새로고침 무한 정지 현상 해결 로직]
+        // 위치를 확인하는 동안 지도가 멈추지 않게 타임아웃 예외 처리를 엄격하게 적용했습니다.
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 function(position) {
                     const locPosition = new kakao.maps.LatLng(position.coords.latitude, position.coords.longitude);
                     map.setCenter(locPosition);
-                    searchPlaces(); // 현재 위치를 기반으로 바로 주변 탐색
+                    searchPlaces(); // 현재 위치 이동 후 주변 극장 검색
                 },
                 function(error) {
-                    // 사용자가 위치 권한을 거부했거나 오류가 나도 기본 좌표(서울시청) 기준으로 검색 실행
+                    // 위치 수집 권한이 없거나 차단된 환경에서도 지도가 죽지 않고 서울시청 기준으로 실행됩니다.
+                    console.log("위치 정보를 가져오지 못했습니다. 기본 위치로 검색합니다.");
                     searchPlaces();
                 },
-                { timeout: 3000 } // 위치 조회가 3초 이상 걸리면 강제로 기본 지도로 넘김
+                { 
+                    enableHighAccuracy: false,
+                    timeout: 3000, // 3초 이내에 내 위치 안 찾아지면 무한 대기 끊어버리고 바로 기본 지도 띄우기
+                    maximumAge: Infinity 
+                }
             );
         } else {
             searchPlaces();
@@ -133,7 +139,7 @@
 
         currentCategoryKeyword = keyword;
         
-        document.getElementById('keyword').value = '';
+        document.getElementById('keyword').value = ''; // 탭 이동 시 검색창 비워주기
         searchPlaces(); 
     }
 
@@ -148,7 +154,7 @@
             finalKeyword = inputKeyword;
         }
 
-        // 문화시설(CT1) 카테고리 필터링을 걸어서 검색
+        // 문화시설(CT1) 카테고리 필터링을 걸어서 검색 바운더리 내만 서칭
         ps.keywordSearch(finalKeyword, placesSearchCB, {
             location: map.getCenter(),
             radius: 5000,
@@ -179,6 +185,7 @@
 
             bounds.extend(placePosition);
 
+            // 왼쪽 리스트 아이템 클릭 시
             itemEl.onclick = function() {
                 displayInfowindow(marker, places[i]);
                 map.panTo(placePosition);
@@ -196,7 +203,7 @@
             map: map
         });
 
-        // 마커 클릭 시 정보창 연결
+        // 순정 마커 클릭 이벤트 연결하여 완벽한 터치 보장
         kakao.maps.event.addListener(marker, 'click', function() {
             displayInfowindow(marker, place);
         });
@@ -214,44 +221,4 @@
 
     function displayInfowindow(marker, place) {
         const address = place.road_address_name ? place.road_address_name : place.address_name;
-        const detailUrl = `https://place.map.kakao.com/${place.id}`;
-        const roadviewUrl = `https://map.kakao.com/link/roadview/${place.y},${place.x}`;
-
-        const content = `
-            <div class="info-popup">
-                <h4>${place.place_name}</h4>
-                <p>${address}</p>
-                <div class="links">
-                    <a href="${roadviewUrl}" target="_blank" class="roadview">🗺️ 로드뷰</a>
-                    <a href="${detailUrl}" target="_blank" class="detail">ℹ️ 상세정보</a>
-                </div>
-            </div>
-        `;
-        
-        infowindow.setContent(content);
-        infowindow.open(map, marker);
-    }
-
-    function getListItem(index, place) {
-        const el = document.createElement('li');
-        
-        let addressHtml = '';
-        if (place.road_address_name) {
-            addressHtml = `<span>${place.road_address_name}</span><span class="gray">(${place.address_name})</span>`;
-        } else {
-            addressHtml = `<span>${place.address_name}</span>`;
-        }
-
-        el.innerHTML = `
-            <div class="item">
-                <h5>${index + 1}. ${place.place_name}</h5>
-                ${addressHtml}
-                ${place.phone ? `<div class="tel">${place.phone}</div>` : ''}
-            </div>
-        `;
-        return el;
-    }
-</script>
-
-</body>
-</html>
+        const detailUrl =
