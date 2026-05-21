@@ -39,7 +39,7 @@
         .item:hover { background: #fff0f3; }
         .item h5 { color: #4a1525; margin-bottom: 5px; font-size: 15px; }
         .item span { display: block; font-size: 13px; color: #7a5c65; margin-top: 2px; }
-        .item class="gray" { color: #999; font-size: 11px; }
+        .item .gray { color: #999; font-size: 11px; display: inline; }
         .item .tel { color: #ff477e; font-weight: bold; margin-top: 4px; font-size: 12px; }
 
         /* 오른쪽 지도 영역 */
@@ -87,32 +87,39 @@
     let markers = []; 
     let currentCategoryKeyword = '극장'; 
 
-    // ⚠️ [해결 포인트 2] 카카오맵 공식 안심 로드 기법 사용
-    // 라이브러리가 완전히 준비된 후에만 initMap을 실행하므로 새로고침 오류가 완전 치료됩니다.
-    kakao.maps.load(function() {
-        initMap();
+    // 페이지가 완전히 준비되면 지도 안전 로드 프로세스 시작
+    window.addEventListener('DOMContentLoaded', function() {
+        kakao.maps.load(function() {
+            initMap();
+        });
     });
 
     function initMap() {
         const container = document.getElementById('map');
         const options = {
-            center: new kakao.maps.LatLng(37.566826, 126.9786567), 
+            center: new kakao.maps.LatLng(37.566826, 126.9786567), // 기본 좌표 (서울시청)
             level: 4
         };
 
         map = new kakao.maps.Map(container, options);
         ps = new kakao.maps.services.Places(); 
-        infowindow = new kakao.maps.InfoWindow({zIndex:1, removable: true});
+        infowindow = new kakao.maps.InfoWindow({zIndex: 1, removable: true});
 
-        // 사용자 현재 위치 잡기 및 첫 로드 시 자동 검색
+        // ⚠️ [새로고침 먹통 현상 핵심 해결 코드]
+        // Geolocation의 딜레이가 지도 로드를 막지 못하도록 독립적인 타임아웃과 예외 처리를 추가했습니다.
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(function(position) {
-                const locPosition = new kakao.maps.LatLng(position.coords.latitude, position.coords.longitude);
-                map.setCenter(locPosition);
-                searchPlaces(); 
-            }, function() {
-                searchPlaces(); 
-            });
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const locPosition = new kakao.maps.LatLng(position.coords.latitude, position.coords.longitude);
+                    map.setCenter(locPosition);
+                    searchPlaces(); // 현재 위치를 기반으로 바로 주변 탐색
+                },
+                function(error) {
+                    // 사용자가 위치 권한을 거부했거나 오류가 나도 기본 좌표(서울시청) 기준으로 검색 실행
+                    searchPlaces();
+                },
+                { timeout: 3000 } // 위치 조회가 3초 이상 걸리면 강제로 기본 지도로 넘김
+            );
         } else {
             searchPlaces();
         }
@@ -141,6 +148,7 @@
             finalKeyword = inputKeyword;
         }
 
+        // 문화시설(CT1) 카테고리 필터링을 걸어서 검색
         ps.keywordSearch(finalKeyword, placesSearchCB, {
             location: map.getCenter(),
             radius: 5000,
@@ -166,4 +174,84 @@
 
         for (let i = 0; i < places.length; i++) {
             const placePosition = new kakao.maps.LatLng(places[i].y, places[i].x);
-            const marker = addMarker
+            const marker = addMarker(placePosition, places[i]);
+            const itemEl = getListItem(i, places[i]); 
+
+            bounds.extend(placePosition);
+
+            itemEl.onclick = function() {
+                displayInfowindow(marker, places[i]);
+                map.panTo(placePosition);
+            };
+
+            listEl.appendChild(itemEl);
+        }
+        
+        map.setBounds(bounds); 
+    }
+
+    function addMarker(position, place) {
+        const marker = new kakao.maps.Marker({
+            position: position,
+            map: map
+        });
+
+        // 마커 클릭 시 정보창 연결
+        kakao.maps.event.addListener(marker, 'click', function() {
+            displayInfowindow(marker, place);
+        });
+
+        markers.push(marker); 
+        return marker;
+    }
+
+    function removeMarkers() {
+        for (let i = 0; i < markers.length; i++) {
+            markers[i].setMap(null);
+        }
+        markers = [];
+    }
+
+    function displayInfowindow(marker, place) {
+        const address = place.road_address_name ? place.road_address_name : place.address_name;
+        const detailUrl = `https://place.map.kakao.com/${place.id}`;
+        const roadviewUrl = `https://map.kakao.com/link/roadview/${place.y},${place.x}`;
+
+        const content = `
+            <div class="info-popup">
+                <h4>${place.place_name}</h4>
+                <p>${address}</p>
+                <div class="links">
+                    <a href="${roadviewUrl}" target="_blank" class="roadview">🗺️ 로드뷰</a>
+                    <a href="${detailUrl}" target="_blank" class="detail">ℹ️ 상세정보</a>
+                </div>
+            </div>
+        `;
+        
+        infowindow.setContent(content);
+        infowindow.open(map, marker);
+    }
+
+    function getListItem(index, place) {
+        const el = document.createElement('li');
+        
+        let addressHtml = '';
+        if (place.road_address_name) {
+            addressHtml = `<span>${place.road_address_name}</span><span class="gray">(${place.address_name})</span>`;
+        } else {
+            addressHtml = `<span>${place.address_name}</span>`;
+        }
+
+        el.innerHTML = `
+            <div class="item">
+                <h5>${index + 1}. ${place.place_name}</h5>
+                ${addressHtml}
+                ${place.phone ? `<div class="tel">${place.phone}</div>` : ''}
+            </div>
+        `;
+        return el;
+    }
+</script>
+
+</body>
+</html>
